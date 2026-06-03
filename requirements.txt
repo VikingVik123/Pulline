@@ -1,0 +1,13 @@
+alembic
+psycopg2-binary
+asyncpg
+sqlalchemy
+sqlalchemy[asyncio]
+sqlalchemy-utils
+uvicorn
+fastapi
+pydantic
+pydantic-settings
+aiosqlite
+python-multipart
+python-dotenv

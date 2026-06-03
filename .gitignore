@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+
+env variables
+.env
+.venv
+.env.example
+.env.prod
+
+# virtual environments
+venv/
+env/
+
+# temp dir
+files/"
