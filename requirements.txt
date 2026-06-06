@@ -11,3 +11,4 @@ pydantic-settings
 aiosqlite
 python-multipart
 python-dotenv
+ifcopenshell
