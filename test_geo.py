@@ -31,8 +31,6 @@ def get_element_geometry(element, settings):
         return None
     
 def get_all_geometry(model):
-    settings = ifcopenshell.geom.settings()
-    settings.set(settings.USE_WORLD_COORDS, True)
 
     iterator = ifcopenshell.geom.iterator(settings, model)
     geometry_map = {}
@@ -58,4 +56,7 @@ def get_all_geometry(model):
 
 
 if __name__ == "__main__":
-    geo_map = get_all_geometry(model)   # build once, reuse
+    geo_map = get_all_geometry(model)
+    
+    for elem_id, data in geo_map.items():
+        print(f"ID={elem_id:<8} TYPE={data['type']:<30} NAME={data['name']:<20} CENTROID={data['centroid'].round(3)}")
