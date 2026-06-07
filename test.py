@@ -1,8 +1,14 @@
 import ifcopenshell
 from collections import defaultdict
 
+
+
 model = ifcopenshell.open(
-    r"C:\Users\Victor\Documents\Mr. Okafor Sunday.ifc"
+    r"C:\Users\HP\Documents\Hillside_House.ifc"
+)
+
+model2 = ifcopenshell.open(
+    r"C:\Users\HP\Documents\Mr. Okafor Sunday.ifc"
 )
 
 # -----------------------------
@@ -102,18 +108,18 @@ def walk_ifc_tree(model):
         for building in get_buildings(site):
 
             print("\n" + "=" * 80)
-            print(f"🏢 BUILDING: {getattr(building, 'Name', 'Unnamed Building')}")
+            print(f"BUILDING: {getattr(building, 'Name', 'Unnamed Building')}")
             print("=" * 80)
 
             for storey in get_storeys(building):
 
                 print("\n" + "-" * 80)
-                print(f"🏗 STOREY: {getattr(storey, 'Name', 'Unnamed Storey')}")
+                print(f"STOREY: {getattr(storey, 'Name', 'Unnamed Storey')}")
                 print("-" * 80)
 
                 # SPACES
                 spaces = get_spaces(storey)
-                print(f"\n📦 SPACES ({len(spaces)})")
+                print(f"\nSPACES ({len(spaces)})")
                 for s in spaces:
                     print(f"ID={s.id():<8} NAME={getattr(s, 'Name', None)}")
 
@@ -126,7 +132,7 @@ def walk_ifc_tree(model):
                 for ifc_type, items in inventory.items():
                     total += len(items)
 
-                    print(f"\n▶ {ifc_type} ({len(items)})")
+                    print(f"\n{ifc_type} ({len(items)})")
                     print("-" * 50)
 
                     for e in items[:10]:
