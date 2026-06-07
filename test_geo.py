@@ -56,7 +56,7 @@ def get_all_geometry(model):
 
 
 if __name__ == "__main__":
-    geo_map = get_all_geometry(model)
+    geo_map = get_all_geometry(model2)
     
     for elem_id, data in geo_map.items():
         print(f"ID={elem_id:<8} TYPE={data['type']:<30} NAME={data['name']:<20} CENTROID={data['centroid'].round(3)}")

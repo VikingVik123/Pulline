@@ -12,3 +12,4 @@ aiosqlite
 python-multipart
 python-dotenv
 ifcopenshell
+matplotlib

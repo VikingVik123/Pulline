@@ -4,11 +4,11 @@ from collections import defaultdict
 
 
 model = ifcopenshell.open(
-    r"C:\Users\HP\Documents\Hillside_House.ifc"
+    r"C:\Users\Victor\Documents\Hillside_House.ifc"
 )
 
 model2 = ifcopenshell.open(
-    r"C:\Users\HP\Documents\Mr. Okafor Sunday.ifc"
+    r"C:\Users\Victor\Documents\Mr. Okafor Sunday.ifc"
 )
 
 # -----------------------------
