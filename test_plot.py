@@ -25,9 +25,9 @@ from collections import defaultdict
 # CONFIG
 # ─────────────────────────────────────────────
 
-IFC_PATH   = r"C:\Users\Victor\Documents\Hillside_House.ifc"
-OUTPUT_DIR = r"C:\Users\Victor\Documents\Pulline\output"
-
+IFC_PATH   = r"C:\Users\HP\Documents\Hillside_House.ifc"
+OUTPUT_DIR = r"C:\Users\HP\Documents\Pulline\output"
+TARGET_STOREY = "Ground Floor"
 # Colour per IFC type (top-down view)
 TYPE_STYLE = {
     "IfcWall":                 dict(color="#2c3e50", alpha=0.9, zorder=4),
@@ -249,21 +249,45 @@ def plot_storey(storey_name, elements_geo, out_path):
 def export_plots(model, geo_map, out_dir):
     for site in get_sites(model):
         for building in get_buildings(site):
+
             bld_name = getattr(building, "Name", "Building")
+
             for storey in get_storeys(building):
+
                 sty_name = getattr(storey, "Name", "Storey")
+
+                # Skip other floors if a target is specified
+                if TARGET_STOREY is not None:
+                    if sty_name.lower() != TARGET_STOREY.lower():
+                        continue
+
                 elements = get_storey_elements(storey)
 
                 elements_geo = []
+
                 for elem in elements:
                     geo = geo_map.get(elem.id())
+
                     if geo:
                         elements_geo.append(geo)
 
                 safe_name = sty_name.replace(" ", "_").replace("/", "-")
-                out_path  = os.path.join(out_dir, f"{bld_name}_{safe_name}.png")
-                print(f"\n  Plotting: {bld_name} / {sty_name} ({len(elements_geo)} elements)")
-                plot_storey(sty_name, elements_geo, out_path)
+
+                out_path = os.path.join(
+                    out_dir,
+                    f"{bld_name}_{safe_name}.png"
+                )
+
+                print(
+                    f"\nPlotting: {bld_name} / {sty_name} "
+                    f"({len(elements_geo)} elements)"
+                )
+
+                plot_storey(
+                    sty_name,
+                    elements_geo,
+                    out_path
+                )
 
 # ─────────────────────────────────────────────
 # ENTRY POINT

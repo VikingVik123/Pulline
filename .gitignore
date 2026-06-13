@@ -13,3 +13,6 @@ env/
 
 # temp dir
 "*.db" 
+
+output/
+files/
