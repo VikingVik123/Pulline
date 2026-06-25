@@ -13,3 +13,9 @@ python-multipart
 python-dotenv
 ifcopenshell
 matplotlib
+sqlmodel
+passlib
+bcrypt
+cryptography
+pyjwt
+python-jose

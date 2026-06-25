@@ -1,7 +1,7 @@
 import ifcopenshell.geom
 import numpy as np
 
-from test import model, model2
+from test import model, model2, model3
 
 settings = ifcopenshell.geom.settings()
 settings.set(settings.USE_WORLD_COORDS, True)

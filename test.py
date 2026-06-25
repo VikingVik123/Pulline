@@ -11,6 +11,10 @@ model2 = ifcopenshell.open(
     r"C:\Users\HP\Documents\Mr. Okafor Sunday.ifc"
 )
 
+model3 = ifcopenshell.open(
+    r"C:\Users\HP\Downloads\WORKING_TEMPLATE.ifc"
+)
+
 # -----------------------------
 # SAFE HELPERS
 # -----------------------------
@@ -149,4 +153,4 @@ def walk_ifc_tree(model):
 # -----------------------------
 
 if __name__ == "__main__":
-    walk_ifc_tree(model)
+    walk_ifc_tree(model3)

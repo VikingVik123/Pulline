@@ -321,7 +321,7 @@ class IFCElementExtractor:
     
 
 
-IFC_PATH   = r"C:\Users\HP\Documents\Hillside_House.ifc"
+IFC_PATH   = r"C:\Users\HP\Documents\Mr. Okafor Sunday.ifc"
 OUTPUT_DIR = r"C:\Users\HP\Documents\Pulline\output"
 
 
