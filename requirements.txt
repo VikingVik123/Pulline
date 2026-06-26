@@ -6,7 +6,7 @@ sqlalchemy[asyncio]
 sqlalchemy-utils
 uvicorn
 fastapi
-pydantic
+pydantic[email]
 pydantic-settings
 aiosqlite
 python-multipart

@@ -6,7 +6,6 @@ import bcrypt
 from jose import jwt
 from jose import JWTError
 from jose import ExpiredSignatureError
-from passlib.hash import bcrypt
 
 from fastapi import (
     HTTPException,
@@ -18,7 +17,7 @@ from fastapi.security import (
     HTTPBearer,
     HTTPAuthorizationCredentials,
 )
-
+from passlib.hash import bcrypt as pwd_context
 from app.core.config import settings
 
 security = HTTPBearer()

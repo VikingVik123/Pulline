@@ -49,6 +49,3 @@ async def refresh_token(refresh_token_request: RefreshTokenRequest, db=Depends(g
     auth_service = AuthService(db)
     return await auth_service.refresh_access_token(refresh_token_request)
 
-@router.get("/me", response_model=User)
-async def get_current_user_info(current_user: User = Depends(AuthService.get_current_user)):
-    return current_user

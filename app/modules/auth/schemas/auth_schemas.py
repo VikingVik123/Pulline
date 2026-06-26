@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 
 class UserCreate(BaseModel):
@@ -31,3 +31,6 @@ class ResetPassword(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+
+model_config = ConfigDict(from_attributes=True)

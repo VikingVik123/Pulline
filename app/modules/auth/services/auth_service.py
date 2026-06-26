@@ -1,9 +1,3 @@
-from http.client import HTTPException
-
-from alembic.util import status
-
-from alembic.util import status
-
 from app.core.config import settings
 from app.db.database import AsyncSession, get_db
 from app.modules.auth.models.auth_models import User
@@ -12,7 +6,7 @@ from app.core.auth_dependencies import (
     verify_password, 
     create_access_token, 
     decode_access_token,
-    get_current_user
+    get_current_payload
     )
 from sqlalchemy.future import select
 from app.modules.auth.schemas.auth_schemas import (
@@ -28,6 +22,7 @@ from app.modules.auth.schemas.auth_schemas import (
 from app.core.email import EmailService
 from datetime import datetime, timedelta, timezone
 import secrets
+from fastapi import HTTPException
 
 class AuthService:
     def __init__(self, db: AsyncSession):
@@ -50,10 +45,6 @@ class AuthService:
         await self.db.commit()
         await self.db.refresh(new_user)
 
-        email_service = EmailService()
-
-        await email_service.send_verification_email(new_user.email, verification_token,)
-
         return UserCreateRes(
             message="User created successfully. Please check your email to verify your account.",
             id=str(new_user.id),
@@ -73,19 +64,19 @@ class AuthService:
 
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=401,
                 detail="Invalid email or password",
             )
 
         if not user.email_verified:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=403,
                 detail="Please verify your email first",
             )
 
         if not verify_password(user_login.password, user.hashed_password):
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=401,
                 detail="Invalid email or password",
             )
 

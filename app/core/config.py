@@ -3,7 +3,7 @@ Configuration management for Pulline API.
 Supports environment-based settings for dev/prod.
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
 import os
 
@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     Application settings loaded from environment variables.
     Use .env files for different environments.
     """
-
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     # Environment
     ENV: Literal["development", "production", "testing"] = "development"
     DEBUG: bool = True
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     API_DESCRIPTION: str = "Building information ingestion and processing API"
 
     # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./test.db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
     # PostgreSQL example: postgresql+asyncpg://user:password@localhost:5432/pulline
     DATABASE_ECHO: bool = False  # Set True to see SQL queries
     DATABASE_POOL_SIZE: int = 20
@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: set[str] = {".ifc", ".dwg", ".pln"}
 
     # Redis (used for queue and caching)
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     REDIS_TIMEOUT: int = 30
     
     # Worker Configuration
