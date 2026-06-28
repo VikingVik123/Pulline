@@ -39,12 +39,17 @@ class Settings(BaseSettings):
     # File Upload
     UPLOAD_DIR: str = "files"
     MAX_UPLOAD_SIZE_MB: int = 1000  # 1GB
-    ALLOWED_EXTENSIONS: set[str] = {".ifc", ".dwg", ".pln"}
+    ALLOWED_EXTENSIONS: set[str] = {".ifc"}
 
     # Redis (used for queue and caching)
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     REDIS_TIMEOUT: int = 30
-    
+    REDIS_TOKEN_PREFIX: str = "token:"
+    REDIS_BLACKLIST_PREFIX: str = "blacklist:"
+    REDIS_SESSION_PREFIX: str = "session:"
+    REDIS_USER_TOKENS_PREFIX: str = "user_tokens:"
+    REDIS_TOKEN_EXPIRE_BUFFER: int = 60
+
     # Worker Configuration
     WORKER_CONCURRENCY: int = 4
     WORKER_PREFETCH_COUNT: int = 1
@@ -54,5 +59,10 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+    
 
 settings = Settings()  # Load settings from environment variables

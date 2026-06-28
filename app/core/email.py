@@ -16,31 +16,31 @@ class EmailService:
     def _send_email(to_email: str, subject: str, html_content: str) -> dict:
         """Internal method to send email via SMTP."""
         try:
-            if not config.MAIL_USERNAME or not config.MAIL_PASSWORD or not config.MAIL_FROM:
+            if not settings.MAIL_USERNAME or not settings.MAIL_PASSWORD or not settings.MAIL_FROM:
                 return {
                     "success": False,
                     "message": "Failed to send email: SMTP credentials are not fully configured",
                 }
 
             msg = MIMEMultipart('alternative')
-            msg['From'] = config.MAIL_FROM
+            msg['From'] = settings.MAIL_FROM
             msg['To'] = to_email
             msg['Subject'] = subject
             
             html_part = MIMEText(html_content, 'html')
             msg.attach(html_part)
             
-            if config.MAIL_SSL:
-                smtp_client = smtplib.SMTP_SSL(config.MAIL_SERVER, config.MAIL_PORT, timeout=15)
+            if settings.MAIL_SSL:
+                smtp_client = smtplib.SMTP_SSL(settings.MAIL_SERVER, settings.MAIL_PORT, timeout=15)
             else:
-                smtp_client = smtplib.SMTP(config.MAIL_SERVER, config.MAIL_PORT, timeout=15)
+                smtp_client = smtplib.SMTP(settings.MAIL_SERVER, settings.MAIL_PORT, timeout=15)
 
             with smtp_client as server:
-                if config.MAIL_TLS and not config.MAIL_SSL:
+                if settings.MAIL_TLS and not settings.MAIL_SSL:
                     server.ehlo()
                     server.starttls()
                     server.ehlo()
-                server.login(config.MAIL_USERNAME, config.MAIL_PASSWORD)
+                server.login(settings.MAIL_USERNAME, settings.MAIL_PASSWORD)
                 server.send_message(msg)
             
             return {"success": True, "message": "Email sent successfully"}
@@ -50,14 +50,14 @@ class EmailService:
                 extra={
                     "to_email": to_email,
                     "subject": subject,
-                    "mail_server": config.MAIL_SERVER,
-                    "mail_port": config.MAIL_PORT,
+                    "mail_server": settings.MAIL_SERVER,
+                    "mail_port": settings.MAIL_PORT,
                 },
             )
             return {"success": False, "message": f"Failed to send email: {str(e)}"}
     
     @staticmethod
-    def send_welcome_email(to_email: str, username: str) -> dict:
+    def send_welcome_email(to_email: str) -> dict:
         """Send welcome email to new user."""
         html_content = f"""
                 <!DOCTYPE html>
@@ -78,7 +78,7 @@ class EmailService:
                             <h1>Welcome to PayBridge!</h1>
                         </div>
                         <div class="content">
-                            <h2>Hi {username}! 👋</h2>
+                            <h2>Hi {to_email}! 👋</h2>
                             <p>Thank you for signing up for PayBridge - your unified payment gateway solution.</p>
                             <p>With PayBridge, you can:</p>
                             <ul>
@@ -88,7 +88,7 @@ class EmailService:
                                 <li>Track payments in real-time</li>
                             </ul>
                             <p>Get started by creating your first app and adding payment providers!</p>
-                            <a href="{config.FRONTEND_URL or 'https://paybridge.com'}/dashboard" class="button">Go to Dashboard</a>
+                            <a href="{settings.FRONTEND_URL or 'https://paybridge.com'}/dashboard" class="button">Go to Dashboard</a>
                         </div>
                         <div class="footer">
                             <p>© 2024 PayBridge. All rights reserved.</p>
@@ -101,9 +101,9 @@ class EmailService:
         return EmailService._send_email(to_email, "Welcome to PayBridge! 🚀", html_content)
 
     @staticmethod
-    def send_verification_email(to_email: str, username: str, verification_token: str) -> dict:
+    def send_verification_email(to_email: str, verification_token: str) -> dict:
         """Send email verification link to user."""
-        verification_url = f"{config.FRONTEND_URL or 'http://localhost:3000'}/verify-email?token={verification_token}"
+        verification_url = f"{settings.FRONTEND_URL or 'http://localhost:3000'}/verify-email?token={verification_token}"
         html_content = f"""
                 <!DOCTYPE html>
                 <html>
@@ -124,7 +124,7 @@ class EmailService:
                             <h1>Verify Your Email</h1>
                         </div>
                         <div class="content">
-                            <h2>Hi {username}! 👋</h2>
+                            <h2>Hi {to_email}! 👋</h2>
                             <p>Thanks for signing up! Please verify your email address to activate your PayBridge account.</p>
                             <p>Click the button below to verify your email:</p>
                             <a href="{verification_url}" class="button">Verify Email Address</a>
@@ -143,9 +143,9 @@ class EmailService:
         return EmailService._send_email(to_email, "Verify your PayBridge email address", html_content)
 
     @staticmethod
-    def send_password_reset_email(to_email: str, username: str, reset_token: str) -> dict:
+    def send_password_reset_email(to_email: str, reset_token: str) -> dict:
         """Send password reset link to user."""
-        reset_url = f"{config.FRONTEND_URL or 'http://localhost:3000'}/reset-password?token={reset_token}"
+        reset_url = f"{settings.FRONTEND_URL or 'http://localhost:3000'}/reset-password?token={reset_token}"
         html_content = f"""
                 <!DOCTYPE html>
                 <html>
@@ -167,7 +167,7 @@ class EmailService:
                             <h1>🔒 Password Reset Request</h1>
                         </div>
                         <div class="content">
-                            <h2>Hi {username}!</h2>
+                            <h2>Hi {to_email}!</h2>
                             <p>We received a request to reset your PayBridge account password.</p>
                             <p>Click the button below to reset your password:</p>
                             <a href="{reset_url}" class="button">Reset Password</a>

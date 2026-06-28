@@ -19,3 +19,4 @@ bcrypt
 cryptography
 pyjwt
 python-jose
+redis
