@@ -35,6 +35,14 @@ class User(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    
+    # Add files relationship
+    files = relationship(
+        "Ingest",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
 
 class RefreshToken(Base):
@@ -56,7 +64,7 @@ class RefreshToken(Base):
 
     @property
     def is_revoked(self) -> bool:
-        return self.revoked_at is not None
+        return self.revoked  # Fixed: revoked is a Boolean, not revoked_at
 
     @property
     def is_expired(self) -> bool:
@@ -68,6 +76,7 @@ class RefreshToken(Base):
 
     def __repr__(self) -> str:
         return f"<RefreshToken(id={self.id}, user_id={self.user_id})>"
+
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"

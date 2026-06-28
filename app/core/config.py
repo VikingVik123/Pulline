@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # File Upload
     UPLOAD_DIR: str = "files"
-    MAX_UPLOAD_SIZE_MB: int = 1000  # 1GB
+    MAX_UPLOAD_SIZE_MB: int = 50 * 1024 * 1024
     ALLOWED_EXTENSIONS: set[str] = {".ifc"}
 
     # Redis (used for queue and caching)
