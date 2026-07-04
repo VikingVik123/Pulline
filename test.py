@@ -3,16 +3,20 @@ from collections import defaultdict
 
 
 
-model = ifcopenshell.open(
-    r"C:\Users\HP\Documents\Hillside_House.ifc"
-)
+#model = ifcopenshell.open(
+#    r"C:\Users\HP\Documents\Hillside_House.ifc"
+#)
 
-model2 = ifcopenshell.open(
-    r"C:\Users\HP\Documents\Mr. Okafor Sunday.ifc"
-)
+#model2 = ifcopenshell.open(
+#    r"C:\Users\HP\Documents\Mr. Okafor Sunday.ifc"
+#)
 
-model3 = ifcopenshell.open(
-    r"C:\Users\HP\Downloads\WORKING_TEMPLATE.ifc"
+#model3 = ifcopenshell.open(
+#    r"C:\Users\HP\Downloads\WORKING_TEMPLATE.ifc"
+#)
+
+model4 = ifcopenshell.open(
+    r"/home/vik/Pulline/PULLINE IFC TEST RUN.ifc"
 )
 
 # -----------------------------
@@ -153,4 +157,4 @@ def walk_ifc_tree(model):
 # -----------------------------
 
 if __name__ == "__main__":
-    walk_ifc_tree(model3)
+    walk_ifc_tree(model4)

@@ -38,7 +38,11 @@ class IngestionService:
         Upload a file - saves file and queues it for background processing
         Returns the file record and the safe filename
         """
-        
+        if extension := Path(file.filename).suffix.lower() not in settings.ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File type not allowed. Allowed types: {settings.ALLOWED_EXTENSIONS}"
+            )
         # Generate safe filename with timestamp to avoid conflicts
         timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
         safe_filename = f"{timestamp}_{file.filename}"

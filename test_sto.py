@@ -321,8 +321,8 @@ class IFCElementExtractor:
     
 
 
-IFC_PATH   = r"C:\Users\HP\Documents\Mr. Okafor Sunday.ifc"
-OUTPUT_DIR = r"C:\Users\HP\Documents\Pulline\output"
+IFC_PATH   = r"/home/vik/Pulline/PULLINE IFC TEST RUN.ifc"
+OUTPUT_DIR = r"/home/vik/Pulline/TOUT"
 
 
 ex = IFCElementExtractor(IFC_PATH, OUTPUT_DIR)
