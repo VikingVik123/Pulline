@@ -89,7 +89,7 @@ async def list_files(
             filetype=file.filetype,
             status=file.status,
             created_at=file.created_at,
-            url=f"{base_url}/uploads/{file.url}" if file.url else ""
+            url=f"{base_url}/uploads/{file.stored_filename}" if file.stored_filename else ""
         ))
     
     return {
@@ -130,7 +130,7 @@ async def get_file(
         filetype=file.filetype,
         status=file.status,
         created_at=file.created_at,
-        url=f"{base_url}/uploads/{file.url}" if file.url else ""
+        url=f"{base_url}/uploads/{file.stored_filename}" if file.stored_filename else ""
     )
 
 
@@ -175,14 +175,14 @@ async def download_file(
             detail="File not found"
         )
     
-    if not file.url:
+    if not (stored_filename := file.stored_filename):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="File URL not found"
         )
     
     upload_dir = Path(settings.UPLOAD_DIR) if hasattr(settings, 'UPLOAD_DIR') else Path("./uploads")
-    file_path = upload_dir / file.url
+    file_path = upload_dir / stored_filename
     
     if not file_path.exists():
         raise HTTPException(

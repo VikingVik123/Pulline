@@ -109,7 +109,7 @@ async def decode_access_token(token: str) -> Dict[str, Any]:
     """Decode and validate access token"""
     try:
         # First check Redis blacklist
-        if await redis_service.is_token_blacklisted(token):
+        if await redis_service.is_blacklisted(token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has been revoked",

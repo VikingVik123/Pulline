@@ -14,14 +14,12 @@ from app.modules.ingest.schemas.ingest_schema import (
     FileDeleteResponse, FileListResponse
 )
 from app.core.config import settings
-from app.core.redis_queue import RedisQueue
 
 
 class IngestionService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.upload_dir = Path(settings.UPLOAD_DIR) if hasattr(settings, 'UPLOAD_DIR') else Path("./uploads")
-        self.queue = RedisQueue("file_queue")
         self._ensure_upload_dir()
 
     def _ensure_upload_dir(self):
@@ -38,7 +36,8 @@ class IngestionService:
         Upload a file - saves file and queues it for background processing
         Returns the file record and the safe filename
         """
-        if extension := Path(file.filename).suffix.lower() not in settings.ALLOWED_EXTENSIONS:
+        extension = Path(file.filename).suffix.lower()
+        if extension not in settings.ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"File type not allowed. Allowed types: {settings.ALLOWED_EXTENSIONS}"
@@ -76,62 +75,16 @@ class IngestionService:
             user_id=user_id,  # Add user_id
             filename=file.filename,
             filetype=request.filetype or file.content_type or "application/octet-stream",
-            url=safe_filename,
+            stored_filename=safe_filename,
             status="queued"
         )
         
         self.db.add(new_file)
         await self.db.commit()
         await self.db.refresh(new_file)
-        
-        # Add to Redis queue for background processing
-        job_data = {
-            "file_id": str(new_file.id),
-            "user_id": str(user_id),
-            "file_path": str(file_path)
-        }
-        
-        await self.queue.enqueue(job_data)
-        
+            
         return new_file, safe_filename
 
-    async def process_file_job(self, job_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process a file job (called by worker)"""
-        file_id = job_data.get('file_id')
-        if not file_id:
-            return {"status": "failed", "error": "No file_id in job"}
-        
-        stmt = select(Ingest).where(Ingest.id == UUID(file_id))
-        result = await self.db.execute(stmt)
-        file = result.scalar_one_or_none()
-        
-        if not file:
-            return {"status": "failed", "error": "File not found"}
-        
-        try:
-            file.status = "completed"
-            await self.db.commit()
-            
-            job_id = job_data.get('job_id')
-            if job_id:
-                await self.queue.delete_job(job_id)
-            
-            return {
-                "status": "completed",
-                "file_id": file_id,
-                "user_id": str(file.user_id),
-                "message": "File processed successfully"
-            }
-            
-        except Exception as e:
-            file.status = "failed"
-            await self.db.commit()
-            
-            return {
-                "status": "failed",
-                "file_id": file_id,
-                "error": str(e)
-            }
 
     async def get_file(self, file_id: UUID, user_id: UUID) -> Optional[Ingest]:
         """Get a file by ID (with user validation)"""
@@ -188,8 +141,8 @@ class IngestionService:
             )
         
         # Delete physical file
-        if file.url:
-            file_path = self.upload_dir / file.url
+        if file.stored_filename:
+            file_path = self.upload_dir / file.stored_filename
             if file_path.exists():
                 file_path.unlink()
         

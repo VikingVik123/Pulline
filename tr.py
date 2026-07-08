@@ -332,21 +332,18 @@ class IFCElementExtractor:
 
             # Record generated files
             outputs[storey_name] = {
+                "segment_count": len(segs),
                 "csv": csv_path,
                 "svg": svg_path,
-                "dxf": dxf_path if HAS_EZDXF else None,
                 "png": png_path if HAS_MPL else None,
-                "segment_count": len(segs),
+                "dxf": dxf_path if HAS_EZDXF else None,
             }
 
         return outputs
-
-    
 
 
 IFC_PATH   = r"/home/vik/Pulline/PULLINE IFC TEST RUN.ifc"
 OUTPUT_DIR = r"/home/vik/Pulline/TOUT"
 
-
 ex = IFCElementExtractor(IFC_PATH, OUTPUT_DIR)
-ex.run(storeys=["Ground Floor"])
+ex.run()

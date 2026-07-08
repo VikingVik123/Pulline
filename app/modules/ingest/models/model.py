@@ -12,7 +12,7 @@ class Ingest(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     filename = Column(String, nullable=False, index=True)
     filetype = Column(String, nullable=False)
-    url = Column(String, nullable=True)
+    stored_filename = Column(String, nullable=True)
     status = Column(String, nullable=False)  # queued | processing | completed | failed
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

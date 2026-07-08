@@ -4,11 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.modules.auth.routers.auth_routes import router as auth_router
 from app.modules.ingest.routers.ingest_route import router as ingestion_router
-from app.modules.ifc_processing.routers.ifc_routers import router as ifc_router
+from app.modules.ifc_processing.routers.ifc_router import router as ifc_router
 from app.db.database import engine, Base
 from app.core.config import settings
 from app.core.redis_config import RedisService
-from app.core.redis_queue2 import RedisQueue
+
 import logging
 from pathlib import Path
 
@@ -50,10 +50,6 @@ async def lifespan(app: FastAPI):
         redis_service = RedisService()
         if await redis_service.ping():
             logger.info("Redis connected successfully!")
-            
-            # Check queue health
-            queue = RedisQueue("ifc_processing_queue")
-            stats = await queue.get_queue_stats()
             logger.info(f"Queue stats: {stats}")
         else:
             logger.warning("Redis connection failed - running without Redis cache")
@@ -115,7 +111,12 @@ try:
 except Exception as e:
     logger.error(f"Failed to create IFC output directory: {e}")
     raise
-app.mount("/ifc-outputs", StaticFiles(directory=ifc_output_dir), name="ifc-outputs")
+app.mount("/ifc-outputs", StaticFiles(directory=ifc_output_dir), name="ifc-output")
+app.mount(
+    "/ifc_outputs",
+    StaticFiles(directory="ifc_outputs"),
+    name="ifc_output",
+)
 
 # ============ CORS MIDDLEWARE ============
 app.add_middleware(
@@ -129,7 +130,7 @@ app.add_middleware(
 # ============ INCLUDE ROUTERS ============
 app.include_router(auth_router)
 app.include_router(ingestion_router)
-app.include_router(ifc_router)  # Add IFC processing router
+app.include_router(ifc_router)
 
 # ============ HEALTH CHECK ENDPOINTS ============
 
@@ -143,7 +144,6 @@ async def root():
         "endpoints": {
             "auth": "/auth",
             "ingestion": "/ingestion",
-            "ifc": "/ifc",
             "docs": "/docs"
         }
     }
@@ -174,15 +174,6 @@ async def health_check():
         redis_service = RedisService()
         if await redis_service.ping():
             health_status["services"]["redis"] = "connected"
-            
-            # Check queue health
-            queue = RedisQueue("ifc_processing_queue")
-            stats = await queue.get_queue_stats()
-            health_status["services"]["queue"] = {
-                "status": "healthy",
-                "pending": stats.get("pending", 0),
-                "processing": stats.get("processing", 0)
-            }
         else:
             health_status["services"]["redis"] = "disconnected"
             health_status["status"] = "degraded"
@@ -213,24 +204,6 @@ async def health_check():
 async def ping():
     """Simple ping endpoint for basic health checks"""
     return {"ping": "pong"}
-
-
-@app.get("/queue/stats")
-async def get_queue_stats():
-    """Get Redis queue statistics"""
-    try:
-        queue = RedisQueue("ifc_processing_queue")
-        stats = await queue.get_queue_stats()
-        return {
-            "status": "success",
-            "data": stats
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }
-
 
 
 if __name__ == "__main__":

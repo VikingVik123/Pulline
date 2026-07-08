@@ -20,3 +20,5 @@ cryptography
 pyjwt
 python-jose
 redis
+rq
+ezdxf
