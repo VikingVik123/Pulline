@@ -14,6 +14,7 @@ from app.core.auth_dependencies import (
     hash_password, verify_password, create_access_token, create_refresh_token, decode_access_token
 )
 from app.core.redis_config import RedisService
+from app.core.email import EmailService
 
 
 class AuthService:
@@ -424,4 +425,179 @@ class AuthService:
             "in_database": db_token is not None,
             "db_revoked": db_token.revoked if db_token else None,
             "db_expires_at": db_token.expires_at if db_token else None
+        }
+
+    async def send_verification_email(self, user_id: UUID, email: str) -> None:
+        """Enqueue verification email for sending"""
+    
+        verification_token = jwt.encode(
+            {
+                "sub": str(user_id),
+                "type": "verification",
+                "exp": datetime.utcnow() + timedelta(hours=24)
+            },
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM
+        )
+    
+        redis_service = RedisService()
+        await redis_service.enqueue_email({
+            "job_id": str(uuid4()),
+            "email_type": "verification",
+            "to_email": email,
+            "verification_token": verification_token
+        })
+
+    async def send_password_reset_email(self, email: str, reset_token: str) -> None:
+        """Enqueue password reset email for sending"""
+        from app.core.redis_config import RedisService
+    
+        redis_service = RedisService()
+        await redis_service.enqueue_email({
+            "job_id": str(uuid4()),
+            "email_type": "password_reset",
+            "to_email": email,
+            "reset_token": reset_token
+        })
+
+    async def send_welcome_email(self, email: str) -> None:
+        """Enqueue welcome email for sending"""
+        from app.core.redis_config import RedisService
+    
+        redis_service = RedisService()
+        await redis_service.enqueue_email({
+            "job_id": str(uuid4()),
+            "email_type": "welcome",
+            "to_email": email
+        })
+
+        """
+        Doing email verification methods here
+        """
+
+    async def create_verification_token(self, user_id: UUID) -> str:
+        """Create an email verification token"""
+        # Check if user exists
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+    
+        if user.is_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already verified"
+            )
+    
+        # Generate verification token using JWT
+        verification_token = jwt.encode(
+            {
+                "sub": str(user_id),
+                "type": "verification",
+                "jti": str(uuid4()),
+                "exp": datetime.utcnow() + timedelta(hours=24)
+            },
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM
+        )
+        return verification_token
+
+    async def verify_email(self, token: str) -> bool:
+        """Verify user email using token"""
+        try:
+            # Decode and validate token
+            payload = jwt.decode(
+                token,
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM]
+            )
+        
+            # Verify token type
+            if payload.get("type") != "verification":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid token type"
+                )
+        
+            # Get user ID from token
+            user_id = UUID(payload.get("sub"))
+        
+            # Check if token is blacklisted (already used)
+            if await self.redis.is_token_blacklisted(token):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Verification token has already been used"
+                )
+        
+            # Get user
+            user = await self.get_user_by_id(user_id)
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found"
+                )
+        
+            if user.is_verified:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already verified"
+                )
+        
+            # Verify email
+            user.is_verified = True
+            user.updated_at = datetime.utcnow()
+        
+            # Blacklist the token so it can't be used again
+            await self.redis.blacklist_token(token)
+        
+            await self.db.commit()
+            return True
+        
+        except ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification token has expired"
+            )
+        except JWTError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification token"
+            )
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid token format"
+            )
+
+    async def resend_verification_token(self, email: str) -> None:
+        """Resend verification email with new token"""
+        # Get user by email
+        user = await self.get_user_by_email(email)
+    
+        if not user:
+            # Don't reveal if user exists for security
+            return
+    
+        if user.is_verified:
+            # Don't reveal verification status for security
+            return
+    
+        # Create new verification token and send email
+        await self.send_verification_email(user.id, user.email)
+
+    async def check_verification_status(self, user_id: UUID) -> dict:
+        """Check verification status for a user"""
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+    
+        return {
+            "is_verified": user.is_verified,
+            "email": user.email,
+            "message": "Email is verified" if user.is_verified else "Email is not verified"
         }

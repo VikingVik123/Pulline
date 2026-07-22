@@ -41,7 +41,9 @@ from app.modules.ifc_processing.services.services import (
 )
 
 from app.core.redis_config import RedisService
-
+from app.core.auth_dependencies import (
+    get_verified_user
+)
 redis = RedisService()
 
 def build_file_url(
@@ -76,7 +78,7 @@ router = APIRouter(
 )
 async def create_project(
     payload: IFCUploadRequest,
-    current_user: User = Depends(get_current_user_from_token),
+    current_user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
 
@@ -121,7 +123,7 @@ async def create_project(
 async def process_project(
     request: Request,
     project_id: UUID,
-    current_user: User = Depends(get_current_user_from_token),
+    current_user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
 
@@ -201,7 +203,7 @@ async def process_project(
     response_model=IFCProjectListResponse,
 )
 async def list_projects(
-    current_user: User = Depends(get_current_user_from_token),
+    current_user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
 
@@ -234,7 +236,7 @@ async def list_projects(
 async def project_status(
     request: Request,
     project_id: UUID,
-    current_user: User = Depends(get_current_user_from_token),
+    current_user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
 
@@ -303,7 +305,7 @@ async def project_status(
 async def get_project(
     request: Request,
     project_id: UUID,
-    current_user: User = Depends(get_current_user_from_token),
+    current_user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
 
@@ -346,7 +348,7 @@ async def get_project(
 )
 async def delete_project(
     project_id: UUID,
-    current_user: User = Depends(get_current_user_from_token),
+    current_user: User = Depends(get_verified_user),
     db: AsyncSession = Depends(get_db),
 ):
 

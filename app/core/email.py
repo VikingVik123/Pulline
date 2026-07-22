@@ -75,30 +75,22 @@ class EmailService:
                 <body>
                     <div class="container">
                         <div class="header">
-                            <h1>Welcome to PayBridge!</h1>
+                            <h1>Welcome to Pulline!</h1>
                         </div>
                         <div class="content">
-                            <h2>Hi {to_email}! 👋</h2>
-                            <p>Thank you for signing up for PayBridge - your unified payment gateway solution.</p>
-                            <p>With PayBridge, you can:</p>
-                            <ul>
-                                <li>Accept payments from multiple providers</li>
-                                <li>Manage transactions in one place</li>
-                                <li>Integrate easily with your applications</li>
-                                <li>Track payments in real-time</li>
-                            </ul>
-                            <p>Get started by creating your first app and adding payment providers!</p>
-                            <a href="{settings.FRONTEND_URL or 'https://paybridge.com'}/dashboard" class="button">Go to Dashboard</a>
+                            <h2>Hi 👋</h2>
+                            <p>Thank you for signing up for Pulline</p>
+                            <a href="{settings.FRONTEND_URL}/dashboard" class="button">Go to Dashboard</a>
                         </div>
                         <div class="footer">
-                            <p>© 2024 PayBridge. All rights reserved.</p>
+                            <p>© 2026 Pulline. All rights reserved.</p>
                             <p>If you didn't create this account, please ignore this email.</p>
                         </div>
                     </div>
                 </body>
                 </html>
                 """
-        return EmailService._send_email(to_email, "Welcome to PayBridge! 🚀", html_content)
+        return EmailService._send_email(to_email, "Welcome to Pulline! 🚀", html_content)
 
     @staticmethod
     def send_verification_email(to_email: str, verification_token: str) -> dict:
@@ -125,7 +117,7 @@ class EmailService:
                         </div>
                         <div class="content">
                             <h2>Hi {to_email}! 👋</h2>
-                            <p>Thanks for signing up! Please verify your email address to activate your PayBridge account.</p>
+                            <p>Thanks for signing up! Please verify your email address to activate your account.</p>
                             <p>Click the button below to verify your email:</p>
                             <a href="{verification_url}" class="button">Verify Email Address</a>
                             <p>Or copy and paste this link into your browser:</p>
@@ -133,7 +125,7 @@ class EmailService:
                             <p><strong>This link will expire in 24 hours.</strong></p>
                         </div>
                         <div class="footer">
-                            <p>© 2024 PayBridge. All rights reserved.</p>
+                            <p>© 2026 Pulline. All rights reserved.</p>
                             <p>If you didn't create this account, please ignore this email.</p>
                         </div>
                     </div>
@@ -168,7 +160,7 @@ class EmailService:
                         </div>
                         <div class="content">
                             <h2>Hi {to_email}!</h2>
-                            <p>We received a request to reset your PayBridge account password.</p>
+                            <p>We received a request to reset your account password.</p>
                             <p>Click the button below to reset your password:</p>
                             <a href="{reset_url}" class="button">Reset Password</a>
                             <p>Or copy and paste this link into your browser:</p>
@@ -183,7 +175,7 @@ class EmailService:
                             </div>
                         </div>
                         <div class="footer">
-                            <p>© 2024 PayBridge. All rights reserved.</p>
+                            <p>© 2026 Pulline. All rights reserved.</p>
                             <p>This is an automated security email. Please do not reply.</p>
                         </div>
                     </div>

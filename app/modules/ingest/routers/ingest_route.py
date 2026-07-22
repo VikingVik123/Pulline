@@ -14,7 +14,9 @@ from app.db.database import get_db
 from app.core.config import settings
 from app.modules.auth.routers.auth_routes import get_current_user_from_token
 from app.modules.auth.models.auth_model import User
-
+from app.core.auth_dependencies import (
+    get_verified_user
+)
 router = APIRouter(prefix="/ingestion", tags=["file-ingestion"])
 
 
@@ -23,7 +25,7 @@ async def upload_file(
     request: Request,
     file: UploadFile = File(...),
     filetype: Optional[str] = None,
-    current_user: User = Depends(get_current_user_from_token),  # Auth required
+    current_user: User = Depends(get_verified_user),  # Auth required
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -63,7 +65,7 @@ async def list_files(
     status: Optional[str] = Query(None, description="Filter by status: queued, processing, completed, failed"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
-    current_user: User = Depends(get_current_user_from_token),  # Auth required
+    current_user: User = Depends(get_verified_user),  # Auth required
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -104,7 +106,7 @@ async def list_files(
 async def get_file(
     request: Request,
     file_id: str,
-    current_user: User = Depends(get_current_user_from_token),  # Auth required
+    current_user: User = Depends(get_verified_user),  # Auth required
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -137,7 +139,7 @@ async def get_file(
 @router.delete("/files/{file_id}", response_model=FileDeleteResponse)
 async def delete_file(
     file_id: str,
-    current_user: User = Depends(get_current_user_from_token),  # Auth required
+    current_user: User = Depends(get_verified_user),  # Auth required
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -159,7 +161,7 @@ async def delete_file(
 @router.get("/download/{file_id}")
 async def download_file(
     file_id: str,
-    current_user: User = Depends(get_current_user_from_token),  # Auth required
+    current_user: User = Depends(get_verified_user),  # Auth required
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -199,7 +201,7 @@ async def download_file(
 
 @router.get("/queue/stats")
 async def get_queue_stats(
-    current_user: User = Depends(get_current_user_from_token),  # Auth required
+    current_user: User = Depends(get_verified_user),  # Auth required
     db: AsyncSession = Depends(get_db)
 ):
     """

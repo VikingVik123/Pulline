@@ -9,7 +9,10 @@ from app.modules.auth.schemas.auth_schemas import (
     UserCreate, UserLogin, UserResponse, AuthResponse,
     TokenRefresh, RefreshTokenResponse, MessageResponse,
     PasswordResetRequest, PasswordResetConfirm,
-    ChangePassword, UserUpdate, TokenResponse
+    ChangePassword, UserUpdate, TokenResponse,
+    VerifyEmailRequest,
+    ResendVerificationRequest,
+    VerificationStatusResponse
 )
 from app.db.database import get_db
 from app.core.auth_dependencies import get_current_payload, decode_access_token
@@ -56,6 +59,9 @@ async def register(
         user_agent=request.headers.get("user-agent")
     )
     
+    await auth_service.send_welcome_email(user.email)
+    await auth_service.send_verification_email(user.id, user.email)
+
     return AuthResponse(
         user=UserResponse.model_validate(user),
         tokens=tokens
@@ -263,6 +269,7 @@ async def forgot_password(
     token = await auth_service.create_password_reset_token(reset_data.email)
     
     # In production, send email with reset link containing token
+    await auth_service.send_password_reset_email(reset_data.email, token)
     # For now, return token in response (for testing)
     return MessageResponse(
         message=f"Password reset token generated. Token: {token}",
@@ -317,3 +324,61 @@ async def health_check():
         "redis": "connected" if redis_healthy else "disconnected",
         "message": "Redis is operational" if redis_healthy else "Redis is not available - falling back to database-only mode"
     }
+
+@router.post("/verify-email", response_model=MessageResponse)
+async def verify_email(
+    verify_data: VerifyEmailRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Verify email using verification token"""
+    auth_service = AuthService(db)
+    
+    try:
+        await auth_service.verify_email(verify_data.token)
+        return MessageResponse(
+            message="Email verified successfully! You can now log in.",
+            success=True
+        )
+    except HTTPException as e:
+        # Re-raise HTTP exceptions with their original status codes
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to verify email. Please try again."
+        )
+
+@router.post("/resend-verification", response_model=MessageResponse)
+async def resend_verification(
+    resend_data: ResendVerificationRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """Resend verification email"""
+    auth_service = AuthService(db)
+    
+    try:
+        await auth_service.resend_verification_token(resend_data.email)
+        
+        # Always return success to prevent email enumeration
+        return MessageResponse(
+            message="If the email exists and is not verified, a new verification email has been sent.",
+            success=True
+        )
+    except Exception as e:
+        logger.error(f"Error resending verification: {e}")
+        # Still return success to prevent email enumeration
+        return MessageResponse(
+            message="If the email exists and is not verified, a new verification email has been sent.",
+            success=True
+        )
+
+@router.get("/verification-status", response_model=VerificationStatusResponse)
+async def get_verification_status(
+    current_user: User = Depends(get_current_user_from_token),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get email verification status for current user"""
+    auth_service = AuthService(db)
+    status = await auth_service.check_verification_status(current_user.id)
+    return VerificationStatusResponse(**status)

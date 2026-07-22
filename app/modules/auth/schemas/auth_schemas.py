@@ -104,3 +104,15 @@ class RefreshTokenResponse(BaseModel):
 class MessageResponse(BaseModel):
     message: str
     success: bool
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+class VerificationStatusResponse(BaseModel):
+    is_verified: bool
+    email: str
+    message: str

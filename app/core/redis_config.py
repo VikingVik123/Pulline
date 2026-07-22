@@ -25,6 +25,8 @@ class RedisService:
     """
 
     IFC_QUEUE = "ifc:processing"
+    EMAIL_QUEUE = "email:queue"
+    EMAIL_FAILED_QUEUE = "email:failed"
 
     def __init__(self) -> None:
 
@@ -370,3 +372,170 @@ class RedisService:
             "memory": info["used_memory_human"],
             "uptime": info["uptime_in_seconds"],
         }
+
+    # ==========================================================
+    # EMAIL QUEUE - NEW
+    # ==========================================================
+
+    async def enqueue_email(
+        self,
+        to_email: str,
+        email_type: str,
+        subject: str,
+        html_content: str,
+        priority: str = "normal",  # high, normal, low
+        retry_count: int = 0,
+        max_retries: int = 3,
+    ) -> str:
+        """
+        Add email to Redis queue for background processing.
+        Returns the job ID.
+        """
+
+        job_id = f"email:{datetime.utcnow().timestamp()}:{to_email}"
+        
+        email_job = {
+            "job_id": job_id,
+            "to_email": to_email,
+            "email_type": email_type,
+            "subject": subject,
+            "html_content": html_content,
+            "priority": priority,
+            "retry_count": retry_count,
+            "max_retries": max_retries,
+            "created_at": datetime.utcnow().isoformat(),
+            "status": "queued"
+        }
+
+        # Store job data
+        await self.set_json(
+            f"email:job:{job_id}",
+            email_job,
+            expire=86400  # 24 hours
+        )
+        # Add to queue based on priority
+        if priority == "high":
+            await self.redis.lpush(self.EMAIL_QUEUE, job_id)
+        else:
+            await self.redis.rpush(self.EMAIL_QUEUE, job_id)
+        
+        # Track queue size
+        await self.redis.incr("email:queue:count")
+        
+        return job_id
+
+    async def dequeue_email(self, timeout: int = 0) -> Optional[dict]:
+        """
+        Get next email job from queue.
+        """
+        result = await self.redis.blpop(self.EMAIL_QUEUE, timeout=timeout)
+        if result is None:
+            return None
+        
+        _, job_id = result
+        
+        # Get job data
+        job_data = await self.get_json(f"email:job:{job_id}")
+        
+        if job_data:
+            job_data["status"] = "processing"
+            await self.set_json(
+                f"email:job:{job_id}",
+                job_data,
+                expire=86400
+            )
+            await self.redis.decr("email:queue:count")
+        
+        return job_data
+
+    async def get_email_queue_size(self) -> int:
+        """Get current email queue size."""
+        return await self.redis.llen(self.EMAIL_QUEUE)
+
+    async def get_email_queue_count(self) -> int:
+        """Get total queued email count."""
+        count = await self.redis.get("email:queue:count")
+        return int(count) if count else 0
+
+    async def mark_email_sent(self, job_id: str, success: bool, error: str = None):
+        """Mark email job as sent or failed."""
+        job_data = await self.get_json(f"email:job:{job_id}")
+        if not job_data:
+            return
+        
+        if success:
+            job_data["status"] = "sent"
+            job_data["sent_at"] = datetime.utcnow().isoformat()
+            await self.set_json(
+                f"email:job:{job_id}",
+                job_data,
+                expire=86400
+            )
+            # Track successful send
+            await self.redis.hincrby("email:stats", "sent", 1)
+        else:
+            job_data["status"] = "failed"
+            job_data["error"] = error
+            job_data["retry_count"] = job_data.get("retry_count", 0) + 1
+            
+            # Check if we should retry
+            if job_data["retry_count"] < job_data.get("max_retries", 3):
+                # Re-queue with retry
+                job_data["status"] = "queued"
+                await self.set_json(
+                    f"email:job:{job_id}",
+                    job_data,
+                    expire=86400
+                )
+                # Add back to queue with delay
+                await self.redis.rpush(self.EMAIL_QUEUE, job_id)
+                await self.redis.incr("email:queue:count")
+            else:
+                # Move to failed queue
+                await self.redis.rpush(self.EMAIL_FAILED_QUEUE, job_id)
+                await self.set_json(
+                    f"email:job:{job_id}",
+                    job_data,
+                    expire=86400
+                )
+                await self.redis.hincrby("email:stats", "failed", 1)
+
+    async def get_email_stats(self) -> dict:
+        """Get email statistics."""
+        stats = await self.redis.hgetall("email:stats")
+        queue_size = await self.get_email_queue_size()
+        failed_size = await self.redis.llen(self.EMAIL_FAILED_QUEUE)
+        
+        return {
+            "sent": int(stats.get("sent", 0)),
+            "failed": int(stats.get("failed", 0)),
+            "queue_size": queue_size,
+            "failed_queue_size": failed_size,
+            "total_processed": int(stats.get("sent", 0)) + int(stats.get("failed", 0))
+        }
+    
+    async def retry_failed_emails(self, max_retries: int = 3) -> int:
+        """Retry failed emails."""
+        retried = 0
+        
+        while True:
+            result = await self.redis.lpop(self.EMAIL_FAILED_QUEUE)
+            if not result:
+                break
+            
+            job_id = result
+            job_data = await self.get_json(f"email:job:{job_id}")
+            
+            if job_data and job_data.get("retry_count", 0) < max_retries:
+                # Re-queue for retry
+                job_data["status"] = "queued"
+                await self.set_json(
+                    f"email:job:{job_id}",
+                    job_data,
+                    expire=86400
+                )
+                await self.redis.rpush(self.EMAIL_QUEUE, job_id)
+                await self.redis.incr("email:queue:count")
+                retried += 1
+        
+        return retried
