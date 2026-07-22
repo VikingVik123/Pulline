@@ -366,11 +366,10 @@ async def resend_verification(
             success=True
         )
     except Exception as e:
-        logger.error(f"Error resending verification: {e}")
         # Still return success to prevent email enumeration
         return MessageResponse(
             message="If the email exists and is not verified, a new verification email has been sent.",
-            success=True
+            success=False
         )
 
 @router.get("/verification-status", response_model=VerificationStatusResponse)

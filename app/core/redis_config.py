@@ -381,8 +381,9 @@ class RedisService:
         self,
         to_email: str,
         email_type: str,
-        subject: str,
-        html_content: str,
+        subject: str = "",
+        html_content: str = "",
+        token: str = None,
         priority: str = "normal",  # high, normal, low
         retry_count: int = 0,
         max_retries: int = 3,
@@ -390,16 +391,21 @@ class RedisService:
         """
         Add email to Redis queue for background processing.
         Returns the job ID.
+
+        For emails needing a token (verification, password_reset), pass `token`
+        instead of pre-built html_content. The worker uses email_type + token
+        to call the right EmailService method directly.
         """
 
         job_id = f"email:{datetime.utcnow().timestamp()}:{to_email}"
-        
+
         email_job = {
             "job_id": job_id,
             "to_email": to_email,
             "email_type": email_type,
             "subject": subject,
             "html_content": html_content,
+            "token": token,
             "priority": priority,
             "retry_count": retry_count,
             "max_retries": max_retries,
@@ -418,10 +424,10 @@ class RedisService:
             await self.redis.lpush(self.EMAIL_QUEUE, job_id)
         else:
             await self.redis.rpush(self.EMAIL_QUEUE, job_id)
-        
+
         # Track queue size
         await self.redis.incr("email:queue:count")
-        
+
         return job_id
 
     async def dequeue_email(self, timeout: int = 0) -> Optional[dict]:

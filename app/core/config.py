@@ -63,6 +63,15 @@ class Settings(BaseSettings):
 
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
-    
+    # mail
+    MAIL_SERVER: str = os.getenv("MAIL_SERVER")
+    MAIL_PORT: int = os.getenv("MAIL_PORT", 587)
+    MAIL_TLS: bool = os.getenv("MAIL_TLS", True)
+    MAIL_SSL: bool = os.getenv("MAIL_SSL", False)
+
+    # Email Credentials (Required)
+    MAIL_USERNAME: str = os.getenv("MAIL_USERNAME", "infopulline@gmail.com")
+    MAIL_PASSWORD: str = os.getenv("MAIL_PASSWORD")
+    MAIL_FROM:str = os.getenv("MAIL_FROM", "noreply@pulline.com")
 
 settings = Settings()  # Load settings from environment variables

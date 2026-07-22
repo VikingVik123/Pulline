@@ -429,7 +429,6 @@ class AuthService:
 
     async def send_verification_email(self, user_id: UUID, email: str) -> None:
         """Enqueue verification email for sending"""
-    
         verification_token = jwt.encode(
             {
                 "sub": str(user_id),
@@ -441,35 +440,32 @@ class AuthService:
         )
     
         redis_service = RedisService()
-        await redis_service.enqueue_email({
-            "job_id": str(uuid4()),
-            "email_type": "verification",
-            "to_email": email,
-            "verification_token": verification_token
-        })
+        await redis_service.enqueue_email(
+            to_email=email,
+            email_type="verification",
+            token=verification_token,
+        )
 
     async def send_password_reset_email(self, email: str, reset_token: str) -> None:
         """Enqueue password reset email for sending"""
         from app.core.redis_config import RedisService
     
         redis_service = RedisService()
-        await redis_service.enqueue_email({
-            "job_id": str(uuid4()),
-            "email_type": "password_reset",
-            "to_email": email,
-            "reset_token": reset_token
-        })
+        await redis_service.enqueue_email(
+            to_email=email,
+            email_type="password_reset",
+            token=reset_token,
+        )
 
     async def send_welcome_email(self, email: str) -> None:
         """Enqueue welcome email for sending"""
         from app.core.redis_config import RedisService
     
         redis_service = RedisService()
-        await redis_service.enqueue_email({
-            "job_id": str(uuid4()),
-            "email_type": "welcome",
-            "to_email": email
-        })
+        await redis_service.enqueue_email(
+            to_email=email,
+            email_type="welcome",
+        )
 
         """
         Doing email verification methods here
