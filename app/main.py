@@ -102,23 +102,6 @@ async def lifespan(app: FastAPI):
     # ============ SHUTDOWN ============
     logger.info("Shutting down application...")
     
-    # Stop email worker
-    await email_worker.stop()
-    email_task.cancel()
-    try:
-        await email_task
-    except asyncio.CancelledError:
-        pass
-    logger.info("📧 Email worker stopped")
-    
-    # Stop IFC worker
-    ifc_task.cancel()
-    try:
-        await ifc_task
-    except asyncio.CancelledError:
-        pass
-    logger.info("🏗️ IFC worker stopped")
-    
     # Close Redis connection
     try:
         redis_service = RedisService()
