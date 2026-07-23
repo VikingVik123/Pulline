@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 import bcrypt
 import jwt
 from jose import JWTError, ExpiredSignatureError
+from jwt import ExpiredSignatureError, InvalidTokenError as JWTError
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -546,7 +547,7 @@ class AuthService:
             user.updated_at = datetime.utcnow()
         
             # Blacklist the token so it can't be used again
-            await self.redis.blacklist_token(token)
+            await self.redis.blacklist_token(token, expires=86400)
         
             await self.db.commit()
             return True

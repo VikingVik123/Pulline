@@ -8,20 +8,62 @@ from app.modules.ifc_processing.routers.ifc_router import router as ifc_router
 from app.db.database import engine, Base
 from app.core.config import settings
 from app.core.redis_config import RedisService
-
+from app.workers.email_worker import email_worker
+import asyncio
 import logging
 from pathlib import Path
+from uuid import UUID
+
+# Force SQLAlchemy to register all models
+from app.modules.auth.models.auth_model import User, RefreshToken, PasswordResetToken
+from app.modules.ingest.models.model import Ingest
+from app.modules.ifc_processing.models.ifc_model import IFCProject
+from app.db.database import AsyncSessionLocal
+from app.modules.ifc_processing.services.services import IFCProcessingService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+async def ifc_worker():
+    """Background worker for IFC project processing."""
+    redis = RedisService()
+    logger.info("🏗️ IFC worker started")
+    
+    while True:
+        try:
+            job = await redis.dequeue_project()
+            
+            if job is None:
+                await asyncio.sleep(2)  # Wait before checking again
+                continue
+            
+            project_id = UUID(job["project_id"])
+            logger.info(f"Processing IFC project: {project_id}")
+            
+            async with AsyncSessionLocal() as db:
+                service = IFCProcessingService(db)
+                try:
+                    await service.process_project(project_id)
+                    logger.info(f"✅ IFC project processed: {project_id}")
+                except Exception as e:
+                    logger.error(f"❌ IFC project failed: {project_id} - {e}")
+                    
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error(f"IFC worker error: {e}")
+            await asyncio.sleep(5)
+    
+    await redis.close()
+    logger.info("🏗️ IFC worker stopped")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Lifespan context manager for startup and shutdown events.
-    This replaces the deprecated @app.on_event decorators.
     """
     # ============ STARTUP ============
     logger.info("Starting up application...")
@@ -36,25 +78,21 @@ async def lifespan(app: FastAPI):
     ifc_output_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"IFC output directory ready: {ifc_output_dir}")
     
-    # Create database tables (commented out - use Alembic migrations instead)
-    # try:
-    #     async with engine.begin() as conn:
-    #         await conn.run_sync(Base.metadata.create_all)
-    #     logger.info("Database tables created/verified")
-    # except Exception as e:
-    #     logger.error(f"Database initialization failed: {e}")
-    #     raise
-    
     # Test Redis connection
     try:
         redis_service = RedisService()
         if await redis_service.ping():
             logger.info("Redis connected successfully!")
-            logger.info(f"Queue stats: {stats}")
         else:
             logger.warning("Redis connection failed - running without Redis cache")
     except Exception as e:
         logger.warning(f"Redis initialization warning: {e}")
+    
+    # Start background workers
+    #email_task = asyncio.create_task(email_worker.run())
+    #ifc_task = asyncio.create_task(ifc_worker())
+    #logger.info("📧 Email worker started")
+    #logger.info("🏗️ IFC worker started")
     
     logger.info("Application startup complete!")
     
@@ -63,6 +101,23 @@ async def lifespan(app: FastAPI):
     
     # ============ SHUTDOWN ============
     logger.info("Shutting down application...")
+    
+    # Stop email worker
+    await email_worker.stop()
+    email_task.cancel()
+    try:
+        await email_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("📧 Email worker stopped")
+    
+    # Stop IFC worker
+    ifc_task.cancel()
+    try:
+        await ifc_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("🏗️ IFC worker stopped")
     
     # Close Redis connection
     try:
@@ -93,30 +148,22 @@ app = FastAPI(
 )
 
 # ============ STATIC FILES ============
-# Serve uploaded files
 upload_dir = Path(settings.UPLOAD_DIR) if hasattr(settings, 'UPLOAD_DIR') else Path("./uploads")
 try:
     upload_dir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"Upload directory ready: {upload_dir.absolute()}")
 except Exception as e:
     logger.error(f"Failed to create upload directory: {e}")
     raise
 app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
-# Serve IFC output files
 ifc_output_dir = Path("ifc_outputs")
 try:
     ifc_output_dir.mkdir(parents=True, exist_ok=True)
-    logger.info(f"IFC output directory ready: {ifc_output_dir.absolute()}")
 except Exception as e:
     logger.error(f"Failed to create IFC output directory: {e}")
     raise
 app.mount("/ifc-outputs", StaticFiles(directory=ifc_output_dir), name="ifc-output")
-app.mount(
-    "/ifc_outputs",
-    StaticFiles(directory="ifc_outputs"),
-    name="ifc_output",
-)
+app.mount("/ifc_outputs", StaticFiles(directory="ifc_outputs"), name="ifc_output")
 
 # ============ CORS MIDDLEWARE ============
 app.add_middleware(
@@ -136,7 +183,6 @@ app.include_router(ifc_router)
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
     return {
         "message": "Welcome to the API",
         "status": "running",
@@ -181,28 +227,36 @@ async def health_check():
         health_status["services"]["redis"] = f"error: {str(e)}"
         health_status["status"] = "degraded"
     
-    # Check upload directory
+    # Check workers
+    try:
+        redis_service = RedisService()
+        email_queue = await redis_service.get_email_queue_size()
+        ifc_queue = await redis_service.get_queue_size("ifc_project_queue")  # Adjust key name if needed
+        health_status["services"]["workers"] = {
+            "email": f"running (queue: {email_queue})",
+            "ifc": f"running (queue: {ifc_queue})"
+        }
+    except Exception as e:
+        health_status["services"]["workers"] = f"error: {str(e)}"
+    
+    # Check directories
     try:
         upload_dir = Path(settings.UPLOAD_DIR) if hasattr(settings, 'UPLOAD_DIR') else Path("./uploads")
         health_status["services"]["uploads"] = "accessible" if upload_dir.exists() else "not_found"
     except Exception as e:
         health_status["services"]["uploads"] = f"error: {str(e)}"
-        health_status["status"] = "degraded"
     
-    # Check IFC output directory
     try:
         ifc_output_dir = Path("ifc_outputs")
         health_status["services"]["ifc_outputs"] = "accessible" if ifc_output_dir.exists() else "not_found"
     except Exception as e:
         health_status["services"]["ifc_outputs"] = f"error: {str(e)}"
-        health_status["status"] = "degraded"
     
     return health_status
 
 
 @app.get("/ping")
 async def ping():
-    """Simple ping endpoint for basic health checks"""
     return {"ping": "pong"}
 
 

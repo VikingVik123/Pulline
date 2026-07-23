@@ -3,7 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List
 from uuid import UUID
-
+import logging
 from app.modules.auth.services.auth_service import AuthService
 from app.modules.auth.schemas.auth_schemas import (
     UserCreate, UserLogin, UserResponse, AuthResponse,
@@ -18,7 +18,7 @@ from app.db.database import get_db
 from app.core.auth_dependencies import get_current_payload, decode_access_token
 from app.core.redis_config import RedisService
 from app.modules.auth.models.auth_model import User
-
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
@@ -343,6 +343,7 @@ async def verify_email(
         # Re-raise HTTP exceptions with their original status codes
         raise
     except Exception as e:
+        logger.exception("verify_email failed for token=%s", verify_data.token)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to verify email. Please try again."
