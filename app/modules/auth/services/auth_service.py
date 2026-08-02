@@ -183,7 +183,7 @@ class AuthService:
     async def revoke_refresh_token(self, refresh_token: str) -> bool:
         """Revoke a refresh token in both Redis and database"""
         # Blacklist in Redis
-        await self.redis.blacklist_token(refresh_token)
+        await self.redis.blacklist_token(refresh_token, expires=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
         await self.redis.delete_token(refresh_token)
         
         # Also revoke in database

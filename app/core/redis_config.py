@@ -32,6 +32,7 @@ class RedisService:
 
         self.redis: Redis = redis.from_url(
             settings.REDIS_URL,
+            protocol=2,
             decode_responses=True,
             encoding="utf-8",
             socket_connect_timeout=5,

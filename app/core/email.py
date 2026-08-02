@@ -95,7 +95,7 @@ class EmailService:
     @staticmethod
     def send_verification_email(to_email: str, verification_token: str) -> dict:
         """Send email verification link to user."""
-        verification_url = f"{settings.FRONTEND_URL or 'http://localhost:3000'}/verify-email?token={verification_token}"
+        verification_url = f"{settings.FRONTEND_URL or 'http://localhost:5173'}/verify-email?token={verification_token}"
         html_content = f"""
                 <!DOCTYPE html>
                 <html>
@@ -132,12 +132,12 @@ class EmailService:
                 </body>
                 </html>
                 """
-        return EmailService._send_email(to_email, "Verify your PayBridge email address", html_content)
+        return EmailService._send_email(to_email, "Verify your Pulline email address", html_content)
 
     @staticmethod
     def send_password_reset_email(to_email: str, reset_token: str) -> dict:
         """Send password reset link to user."""
-        reset_url = f"{settings.FRONTEND_URL or 'http://localhost:3000'}/reset-password?token={reset_token}"
+        reset_url = f"{settings.FRONTEND_URL or 'http://localhost:5173'}/reset-password?token={reset_token}"
         html_content = f"""
                 <!DOCTYPE html>
                 <html>
@@ -182,4 +182,4 @@ class EmailService:
                 </body>
                 </html>
                 """
-        return EmailService._send_email(to_email, "Reset your PayBridge password", html_content)
+        return EmailService._send_email(to_email, "Reset your Pulline password", html_content)
